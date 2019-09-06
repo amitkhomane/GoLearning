@@ -48,6 +48,7 @@ func inTimeSpan(start, end, check time.Time) bool {
 
 func totalBuilds(duration string, start string, end string, data []Data) {
 	fmt.Println("In side totalBuilds", duration)
+	done := make(chan bool, 1)
 	if duration != "" {
 		d, _ := time.ParseDuration(duration)
 		startTime := time.Now().Add(-d)
@@ -55,7 +56,6 @@ func totalBuilds(duration string, start string, end string, data []Data) {
 		endTime := time.Now()
 		fmt.Println("endTime", endTime)
 
-		done := make(chan bool, 1)
 		go func() {
 			count := 0
 			for _, ele := range data {
@@ -76,6 +76,28 @@ func totalBuilds(duration string, start string, end string, data []Data) {
 		}()
 		<-done
 
+	} else {
+		startTime, _ := time.Parse("2006-01-02 15:04:05", start)
+		endTime, _ := time.Parse("2006-01-02 15:04:05", end)
+		fmt.Println("Start:", startTime)
+		fmt.Println("end:", endTime)
+		go func() {
+			count := 0
+			for _, ele := range data {
+
+				startedat, _ := time.Parse(time.RFC3339, ele.StartedAt)
+				endat, _ := time.Parse(time.RFC3339, ele.FinishedAt)
+				if inTimeSpan(startTime, endTime, time.Time(startedat)) && inTimeSpan(startTime, endTime, time.Time(endat)) {
+					fmt.Println("ID: ", ele.ID)
+					count++
+				}
+			}
+			fmt.Printf("Total %d builds executed in given time ", count)
+			done <- true
+
+		}()
+		<-done
+
 	}
 
 }
@@ -83,7 +105,7 @@ func totalBuilds(duration string, start string, end string, data []Data) {
 func main() {
 	fptr := flag.String("fpath", "data.csv", "path to csv file")
 	cptr := flag.Int("top", 0, "list top users")
-	dptr := flag.String("d", "15m", "time duration window")
+	dptr := flag.String("d", "", "time duration window")
 	fromptr := flag.String("from", "", "time from")
 	toptr := flag.String("to", "", "time till")
 

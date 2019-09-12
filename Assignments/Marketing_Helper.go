@@ -6,27 +6,19 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"os"
 	"sort"
+	"strconv"
 	"time"
+
+	"github.com/amitkhomane/GoLearning/Assignments/utils"
 )
 
 type keyVal struct {
 	key string
 	val int
 }
-type Data struct {
-	ID          string
-	User        string
-	RequestedAt string
-	StartedAt   string
-	FinishedAt  string
-	Deleted     string
-	ExitCode    string
-	Size        string
-}
 
-func count(d []Data) map[string]int {
+func count(d []utils.Data) map[string]int {
 	UserCount := make(map[string]int)
 	for _, n := range d {
 		user := n.User
@@ -46,8 +38,7 @@ func inTimeSpan(start, end, check time.Time) bool {
 	return check.After(start) && check.Before(end)
 }
 
-func totalBuilds(duration string, start string, end string, data []Data) {
-	fmt.Println("In side totalBuilds", duration)
+func totalBuilds(duration string, start string, end string, data []utils.Data) {
 	done := make(chan bool, 1)
 	if duration != "" {
 		d, _ := time.ParseDuration(duration)
@@ -60,14 +51,9 @@ func totalBuilds(duration string, start string, end string, data []Data) {
 			count := 0
 			for _, ele := range data {
 
-				startedat, _ := time.Parse(time.RFC3339, ele.StartedAt)
-				endat, _ := time.Parse(time.RFC3339, ele.FinishedAt)
-				if inTimeSpan(startTime, endTime, time.Time(startedat)) && inTimeSpan(startTime, endTime, time.Time(endat)) {
+				if inTimeSpan(startTime, endTime, time.Time(ele.StartedAt)) && inTimeSpan(startTime, endTime, time.Time(ele.FinishedAt)) {
 					fmt.Println("ID: ", ele.ID)
 					count++
-				} else {
-					fmt.Println("NOT")
-
 				}
 			}
 			fmt.Printf("Total %d builds executed in given time ", count)
@@ -85,9 +71,7 @@ func totalBuilds(duration string, start string, end string, data []Data) {
 			count := 0
 			for _, ele := range data {
 
-				startedat, _ := time.Parse(time.RFC3339, ele.StartedAt)
-				endat, _ := time.Parse(time.RFC3339, ele.FinishedAt)
-				if inTimeSpan(startTime, endTime, time.Time(startedat)) && inTimeSpan(startTime, endTime, time.Time(endat)) {
+				if inTimeSpan(startTime, endTime, time.Time(ele.StartedAt)) && inTimeSpan(startTime, endTime, time.Time(ele.FinishedAt)) {
 					fmt.Println("ID: ", ele.ID)
 					count++
 				}
@@ -111,41 +95,38 @@ func main() {
 
 	flag.Parse()
 
-	f, err := os.Open(*fptr)
-	if err != nil {
-		fmt.Println("Unable to read the file", err)
-		return
-	}
+	f := utils.Openfile(*fptr)
 
 	defer func() {
-		if err = f.Close(); err != nil {
-			fmt.Println("Unable to close the file")
+		if err := f.Close(); err != nil {
+			fmt.Println("Unable to close file")
 		}
-
 	}()
 
-	reader := csv.NewReader(bufio.NewReader(f))
-	var data []Data
+	readData := csv.NewReader(bufio.NewReader(f))
+
+	var data []utils.Data
+	var record utils.Data
 	for {
-		line, error := reader.Read()
+		line, error := readData.Read()
 		if error == io.EOF {
 			break
 		}
+		record.ID = line[0]
+		record.User = line[1]
+		record.RequestedAt, _ = time.Parse(time.RFC3339, line[2])
+		record.StartedAt, _ = time.Parse(time.RFC3339, line[3])
+		record.FinishedAt, _ = time.Parse(time.RFC3339, line[4])
+		record.Deleted, _ = strconv.ParseBool(line[5])
+		record.ExitCode, _ = strconv.Atoi(line[6])
+		record.Size, _ = strconv.ParseInt(line[7], 10, 32)
 
-		data = append(data, Data{
-			ID:          line[0],
-			User:        line[1],
-			RequestedAt: line[2],
-			StartedAt:   line[3],
-			FinishedAt:  line[4],
-			Deleted:     line[5],
-			ExitCode:    line[6],
-			Size:        line[7],
-		})
+		data = append(data, record)
 
 	}
-
-	fmt.Println(time.Parse(time.RFC3339, data[0].StartedAt))
+	for i, ele := range data {
+		fmt.Println(i, ele)
+	}
 
 	userCount := count(data)
 	fmt.Println(userCount)

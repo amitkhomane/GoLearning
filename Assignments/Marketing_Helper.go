@@ -124,12 +124,8 @@ func main() {
 		data = append(data, record)
 
 	}
-	for i, ele := range data {
-		fmt.Println(i, ele)
-	}
 
 	userCount := count(data)
-	fmt.Println(userCount)
 	users := make([]string, 0, len(userCount))
 	func() {
 
